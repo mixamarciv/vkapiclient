@@ -1,0 +1,15 @@
+{
+  "name": "vkapiclient",
+  "version": "1.0.0",
+  "devDependencies": {
+    "svelte": "^3.0.0"
+  },
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "socket.io": "^2.3.0",
+    "socket.io-client": "^2.3.0",
+    "vkflow": "^1.0.1"
+  }
+}
