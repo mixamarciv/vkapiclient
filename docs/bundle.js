@@ -462,6 +462,86 @@ var main = (function () {
     }
 
     const globals = (typeof window !== 'undefined' ? window : global);
+    function outro_and_destroy_block(block, lookup) {
+        transition_out(block, 1, 1, () => {
+            lookup.delete(block.key);
+        });
+    }
+    function update_keyed_each(old_blocks, changed, get_key, dynamic, ctx, list, lookup, node, destroy, create_each_block, next, get_context) {
+        let o = old_blocks.length;
+        let n = list.length;
+        let i = o;
+        const old_indexes = {};
+        while (i--)
+            old_indexes[old_blocks[i].key] = i;
+        const new_blocks = [];
+        const new_lookup = new Map();
+        const deltas = new Map();
+        i = n;
+        while (i--) {
+            const child_ctx = get_context(ctx, list, i);
+            const key = get_key(child_ctx);
+            let block = lookup.get(key);
+            if (!block) {
+                block = create_each_block(key, child_ctx);
+                block.c();
+            }
+            else if (dynamic) {
+                block.p(changed, child_ctx);
+            }
+            new_lookup.set(key, new_blocks[i] = block);
+            if (key in old_indexes)
+                deltas.set(key, Math.abs(i - old_indexes[key]));
+        }
+        const will_move = new Set();
+        const did_move = new Set();
+        function insert(block) {
+            transition_in(block, 1);
+            block.m(node, next);
+            lookup.set(block.key, block);
+            next = block.first;
+            n--;
+        }
+        while (o && n) {
+            const new_block = new_blocks[n - 1];
+            const old_block = old_blocks[o - 1];
+            const new_key = new_block.key;
+            const old_key = old_block.key;
+            if (new_block === old_block) {
+                // do nothing
+                next = new_block.first;
+                o--;
+                n--;
+            }
+            else if (!new_lookup.has(old_key)) {
+                // remove old block
+                destroy(old_block, lookup);
+                o--;
+            }
+            else if (!lookup.has(new_key) || will_move.has(new_key)) {
+                insert(new_block);
+            }
+            else if (did_move.has(old_key)) {
+                o--;
+            }
+            else if (deltas.get(new_key) > deltas.get(old_key)) {
+                did_move.add(new_key);
+                insert(new_block);
+            }
+            else {
+                will_move.add(old_key);
+                o--;
+            }
+        }
+        while (o--) {
+            const old_block = old_blocks[o];
+            if (!new_lookup.has(old_block.key))
+                destroy(old_block, lookup);
+        }
+        while (n)
+            insert(new_blocks[n - 1]);
+        return new_blocks;
+    }
     function mount_component(component, target, anchor) {
         const { fragment, on_mount, on_destroy, after_update } = component.$$;
         fragment.m(target, anchor);
@@ -6064,6 +6144,8 @@ var main = (function () {
     		isupdated: 0,  // флаг что юзер ещё не отправил обновленные правила на сервер
     		sendRules: sendRules,
     		getRules: getRules,
+    		addRule: addRule,
+    		delRule: delRule,
     		updateRule: updateRule,
     	};
 
@@ -6086,12 +6168,33 @@ var main = (function () {
     			socketData.emit('rules', rules);
     		});
     	}
+    	function addRule(rule) {
+    		if (!rule.tag) rule.tag = 'tag' + moment().format('YYMMDDHHmmssSSS');
+    		vkrules.rules.push(rule);
+    		vkrules.isupdated = 1;
+    		set(vkrules);
+    	}
+    	function delRule(i, rule) {
+    		let irule = vkrules.rules[i];
+    		console.log("i: " + i + " rule: " + rule + "  irule: " + irule);
+    		console.log(rule);
+    		if (rule.tag != irule.tag) {
+    			console.log("you can't delete this rule ");
+    			console.log(rule);
+    			console.log(irule);
+    			return;
+    		}
+    		vkrules.rules.splice(i, 1);
+    		vkrules.isupdated = 1;
+    		set(vkrules);
+    	}
     	function updateRule(i, rule) {
     		vkrules.rules[i] = rule;
     		vkrules.isupdated = 1;
     		set(vkrules);
     	}
     	function sendRules() {
+    		// отправляем на сервер новые критерии поиска
     		let socket = socketData.getSocket();
     		if (!socket) return;
     		socket.emit('newrules', vkrules.rules);
@@ -6903,56 +7006,56 @@ var main = (function () {
 
     // (6:0) <TemplateMain>
     function create_default_slot$1(ctx) {
-    	var div2, div0, h1, t1, p, t2, a0, t4, div1, a1, t6;
+    	var div1, div0, h1, t1, p0, t2, a0, t4, p1, a1, t6;
 
     	const block = {
     		c: function create() {
-    			div2 = element("div");
+    			div1 = element("div");
     			div0 = element("div");
     			h1 = element("h1");
     			h1.textContent = "ВНИМАНИЕ";
     			t1 = space();
-    			p = element("p");
+    			p0 = element("p");
     			t2 = text("скрипт загружает данные из открытых источников через\n        ");
     			a0 = element("a");
     			a0.textContent = "Streaming API";
     			t4 = space();
-    			div1 = element("div");
+    			p1 = element("p");
     			a1 = element("a");
     			a1.textContent = "авторизуйтесь";
-    			t6 = text("\n      для просмотра загруженных данных и редактирования критериев загрузки");
+    			t6 = text("\n        для просмотра загруженных данных и редактирования критериев загрузки");
     			attr_dev(h1, "class", "display-3");
     			add_location(h1, file$3, 8, 6, 191);
     			attr_dev(a0, "target", "_blank");
     			attr_dev(a0, "href", "https://vk.com/dev.php?method=streaming_api");
     			add_location(a0, file$3, 12, 8, 307);
-    			add_location(p, file$3, 10, 6, 234);
+    			add_location(p0, file$3, 10, 6, 234);
+    			attr_dev(a1, "href", "#/login");
+    			add_location(a1, file$3, 17, 8, 444);
+    			add_location(p1, file$3, 16, 6, 432);
     			attr_dev(div0, "class", "container");
     			add_location(div0, file$3, 7, 4, 161);
-    			attr_dev(a1, "href", "#/login");
-    			add_location(a1, file$3, 18, 6, 453);
-    			add_location(div1, file$3, 17, 4, 441);
-    			attr_dev(div2, "class", "jumbotron");
-    			add_location(div2, file$3, 6, 2, 133);
+    			attr_dev(div1, "class", "jumbotron");
+    			add_location(div1, file$3, 6, 2, 133);
     		},
 
     		m: function mount(target, anchor) {
-    			insert_dev(target, div2, anchor);
-    			append_dev(div2, div0);
+    			insert_dev(target, div1, anchor);
+    			append_dev(div1, div0);
     			append_dev(div0, h1);
     			append_dev(div0, t1);
-    			append_dev(div0, p);
-    			append_dev(p, t2);
-    			append_dev(p, a0);
-    			append_dev(div2, t4);
-    			append_dev(div2, div1);
-    			append_dev(div1, a1);
-    			append_dev(div1, t6);
+    			append_dev(div0, p0);
+    			append_dev(p0, t2);
+    			append_dev(p0, a0);
+    			append_dev(div0, t4);
+    			append_dev(div0, p1);
+    			append_dev(p1, a1);
+    			append_dev(p1, t6);
     		},
 
     		d: function destroy(detaching) {
     			if (detaching) {
-    				detach_dev(div2);
+    				detach_dev(div1);
     			}
     		}
     	};
@@ -7721,27 +7824,40 @@ var main = (function () {
     const file$5 = "src\\data\\Rule.svelte";
 
     function create_fragment$7(ctx) {
-    	var div, strong, t0, t1, t2, t3_value = ctx.rule.tag + "", t3, t4, input, dispose;
+    	var div, strong, t0, t1, span, t2_value = ctx.rule.tag + "", t2, t3, input, t4, button, dispose;
 
     	const block = {
     		c: function create() {
     			div = element("div");
     			strong = element("strong");
-    			t0 = text("[");
-    			t1 = text(ctx.i);
-    			t2 = text("] ");
-    			t3 = text(t3_value);
-    			t4 = space();
+    			t0 = text(ctx.i);
+    			t1 = space();
+    			span = element("span");
+    			t2 = text(t2_value);
+    			t3 = space();
     			input = element("input");
+    			t4 = space();
+    			button = element("button");
+    			button.textContent = "удалить";
     			add_location(strong, file$5, 16, 2, 309);
+    			attr_dev(span, "class", "text-muted");
+    			add_location(span, file$5, 17, 2, 332);
     			attr_dev(input, "type", "text");
     			attr_dev(input, "class", "form-control-sm dark-input mx-2 px-2 col-8 svelte-ss68kl");
     			attr_dev(input, "placeholder", "укажите ключевые слова");
     			attr_dev(input, "id", "input");
-    			add_location(input, file$5, 17, 2, 345);
+    			add_location(input, file$5, 18, 2, 377);
+    			attr_dev(button, "type", "button");
+    			attr_dev(button, "class", "btn btn-sm btn-outline-danger ml-3");
+    			add_location(button, file$5, 28, 2, 643);
     			attr_dev(div, "class", "alert alert-dismissible alert-primary");
     			add_location(div, file$5, 15, 0, 255);
-    			dispose = listen_dev(input, "input", ctx.input_input_handler);
+
+    			dispose = [
+    				listen_dev(input, "input", ctx.input_input_handler),
+    				listen_dev(input, "keyup", ctx.keyup_handler),
+    				listen_dev(button, "click", ctx.click_handler)
+    			];
     		},
 
     		l: function claim(nodes) {
@@ -7752,22 +7868,25 @@ var main = (function () {
     			insert_dev(target, div, anchor);
     			append_dev(div, strong);
     			append_dev(strong, t0);
-    			append_dev(strong, t1);
-    			append_dev(strong, t2);
-    			append_dev(strong, t3);
-    			append_dev(div, t4);
+    			append_dev(div, t1);
+    			append_dev(div, span);
+    			append_dev(span, t2);
+    			append_dev(div, t3);
     			append_dev(div, input);
 
     			set_input_value(input, ctx.ruleValue);
+
+    			append_dev(div, t4);
+    			append_dev(div, button);
     		},
 
     		p: function update(changed, ctx) {
     			if (changed.i) {
-    				set_data_dev(t1, ctx.i);
+    				set_data_dev(t0, ctx.i);
     			}
 
-    			if ((changed.rule) && t3_value !== (t3_value = ctx.rule.tag + "")) {
-    				set_data_dev(t3, t3_value);
+    			if ((changed.rule) && t2_value !== (t2_value = ctx.rule.tag + "")) {
+    				set_data_dev(t2, t2_value);
     			}
 
     			if (changed.ruleValue && (input.value !== ctx.ruleValue)) set_input_value(input, ctx.ruleValue);
@@ -7781,7 +7900,7 @@ var main = (function () {
     				detach_dev(div);
     			}
 
-    			dispose();
+    			run_all(dispose);
     		}
     	};
     	dispatch_dev("SvelteRegisterBlock", { block, id: create_fragment$7.name, type: "component", source: "", ctx });
@@ -7789,6 +7908,11 @@ var main = (function () {
     }
 
     function instance$6($$self, $$props, $$invalidate) {
+    	let $vkrulesStore;
+
+    	validate_store(vkrulesStore, 'vkrulesStore');
+    	component_subscribe($$self, vkrulesStore, $$value => { $vkrulesStore = $$value; $$invalidate('$vkrulesStore', $vkrulesStore); });
+
     	let { i = 0, rule = {} } = $$props;
       let ruleValue = rule.value;
 
@@ -7802,22 +7926,40 @@ var main = (function () {
     		$$invalidate('ruleValue', ruleValue);
     	}
 
+    	const keyup_handler = () => {
+    	      $$invalidate('rule', rule.value = ruleValue, rule);
+    	      $vkrulesStore.updateRule(i, rule);
+    	    };
+
+    	const click_handler = () => {
+    	      $vkrulesStore.delRule(i, rule);
+    	    };
+
     	$$self.$set = $$props => {
     		if ('i' in $$props) $$invalidate('i', i = $$props.i);
     		if ('rule' in $$props) $$invalidate('rule', rule = $$props.rule);
     	};
 
     	$$self.$capture_state = () => {
-    		return { i, rule, ruleValue };
+    		return { i, rule, ruleValue, $vkrulesStore };
     	};
 
     	$$self.$inject_state = $$props => {
     		if ('i' in $$props) $$invalidate('i', i = $$props.i);
     		if ('rule' in $$props) $$invalidate('rule', rule = $$props.rule);
     		if ('ruleValue' in $$props) $$invalidate('ruleValue', ruleValue = $$props.ruleValue);
+    		if ('$vkrulesStore' in $$props) vkrulesStore.set($vkrulesStore);
     	};
 
-    	return { i, rule, ruleValue, input_input_handler };
+    	return {
+    		i,
+    		rule,
+    		ruleValue,
+    		$vkrulesStore,
+    		input_input_handler,
+    		keyup_handler,
+    		click_handler
+    	};
     }
 
     class Rule extends SvelteComponentDev {
@@ -7857,62 +7999,86 @@ var main = (function () {
 
     // (11:4) {:else}
     function create_else_block$2(ctx) {
-    	var each_1_anchor, current;
+    	var t0, each_blocks = [], each_1_lookup = new Map(), t1, button, t3, if_block1_anchor, current, dispose;
+
+    	var if_block0 = (ctx.$vkrulesStore.isupdated) && create_if_block_2$1(ctx);
 
     	let each_value = ctx.$vkrulesStore.rules;
 
-    	let each_blocks = [];
+    	const get_key = ctx => ctx.rule.tag;
 
     	for (let i = 0; i < each_value.length; i += 1) {
-    		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
+    		let child_ctx = get_each_context(ctx, each_value, i);
+    		let key = get_key(child_ctx);
+    		each_1_lookup.set(key, each_blocks[i] = create_each_block(key, child_ctx));
     	}
 
-    	const out = i => transition_out(each_blocks[i], 1, 1, () => {
-    		each_blocks[i] = null;
-    	});
+    	var if_block1 = (ctx.$vkrulesStore.isupdated) && create_if_block_1$2(ctx);
 
     	const block = {
     		c: function create() {
+    			if (if_block0) if_block0.c();
+    			t0 = space();
+
     			for (let i = 0; i < each_blocks.length; i += 1) {
     				each_blocks[i].c();
     			}
 
-    			each_1_anchor = empty();
+    			t1 = space();
+    			button = element("button");
+    			button.textContent = "добавить критерии";
+    			t3 = space();
+    			if (if_block1) if_block1.c();
+    			if_block1_anchor = empty();
+    			attr_dev(button, "type", "button");
+    			attr_dev(button, "class", "btn btn-primary btn-lg mr-3");
+    			add_location(button, file$6, 26, 6, 673);
+    			dispose = listen_dev(button, "click", ctx.click_handler_1);
     		},
 
     		m: function mount(target, anchor) {
+    			if (if_block0) if_block0.m(target, anchor);
+    			insert_dev(target, t0, anchor);
+
     			for (let i = 0; i < each_blocks.length; i += 1) {
     				each_blocks[i].m(target, anchor);
     			}
 
-    			insert_dev(target, each_1_anchor, anchor);
+    			insert_dev(target, t1, anchor);
+    			insert_dev(target, button, anchor);
+    			insert_dev(target, t3, anchor);
+    			if (if_block1) if_block1.m(target, anchor);
+    			insert_dev(target, if_block1_anchor, anchor);
     			current = true;
     		},
 
     		p: function update(changed, ctx) {
-    			if (changed.$vkrulesStore) {
-    				each_value = ctx.$vkrulesStore.rules;
-
-    				let i;
-    				for (i = 0; i < each_value.length; i += 1) {
-    					const child_ctx = get_each_context(ctx, each_value, i);
-
-    					if (each_blocks[i]) {
-    						each_blocks[i].p(changed, child_ctx);
-    						transition_in(each_blocks[i], 1);
-    					} else {
-    						each_blocks[i] = create_each_block(child_ctx);
-    						each_blocks[i].c();
-    						transition_in(each_blocks[i], 1);
-    						each_blocks[i].m(each_1_anchor.parentNode, each_1_anchor);
-    					}
+    			if (ctx.$vkrulesStore.isupdated) {
+    				if (!if_block0) {
+    					if_block0 = create_if_block_2$1(ctx);
+    					if_block0.c();
+    					if_block0.m(t0.parentNode, t0);
     				}
+    			} else if (if_block0) {
+    				if_block0.d(1);
+    				if_block0 = null;
+    			}
 
-    				group_outros();
-    				for (i = each_value.length; i < each_blocks.length; i += 1) {
-    					out(i);
+    			const each_value = ctx.$vkrulesStore.rules;
+
+    			group_outros();
+    			each_blocks = update_keyed_each(each_blocks, changed, get_key, 1, ctx, each_value, each_1_lookup, t1.parentNode, outro_and_destroy_block, create_each_block, t1, get_each_context);
+    			check_outros();
+
+    			if (ctx.$vkrulesStore.isupdated) {
+    				if (!if_block1) {
+    					if_block1 = create_if_block_1$2(ctx);
+    					if_block1.c();
+    					if_block1.m(if_block1_anchor.parentNode, if_block1_anchor);
     				}
-    				check_outros();
+    			} else if (if_block1) {
+    				if_block1.d(1);
+    				if_block1 = null;
     			}
     		},
 
@@ -7926,7 +8092,6 @@ var main = (function () {
     		},
 
     		o: function outro(local) {
-    			each_blocks = each_blocks.filter(Boolean);
     			for (let i = 0; i < each_blocks.length; i += 1) {
     				transition_out(each_blocks[i]);
     			}
@@ -7935,11 +8100,29 @@ var main = (function () {
     		},
 
     		d: function destroy(detaching) {
-    			destroy_each(each_blocks, detaching);
+    			if (if_block0) if_block0.d(detaching);
 
     			if (detaching) {
-    				detach_dev(each_1_anchor);
+    				detach_dev(t0);
     			}
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].d(detaching);
+    			}
+
+    			if (detaching) {
+    				detach_dev(t1);
+    				detach_dev(button);
+    				detach_dev(t3);
+    			}
+
+    			if (if_block1) if_block1.d(detaching);
+
+    			if (detaching) {
+    				detach_dev(if_block1_anchor);
+    			}
+
+    			dispose();
     		}
     	};
     	dispatch_dev("SvelteRegisterBlock", { block, id: create_else_block$2.name, type: "else", source: "(11:4) {:else}", ctx });
@@ -7954,7 +8137,7 @@ var main = (function () {
     		c: function create() {
     			h3 = element("h3");
     			h3.textContent = "загрузка параметров";
-    			add_location(h3, file$6, 9, 6, 235);
+    			add_location(h3, file$6, 9, 6, 240);
     		},
 
     		m: function mount(target, anchor) {
@@ -7975,9 +8158,39 @@ var main = (function () {
     	return block;
     }
 
-    // (12:6) {#each $vkrulesStore.rules as rule, i}
-    function create_each_block(ctx) {
-    	var current;
+    // (12:6) {#if $vkrulesStore.isupdated}
+    function create_if_block_2$1(ctx) {
+    	var button, dispose;
+
+    	const block = {
+    		c: function create() {
+    			button = element("button");
+    			button.textContent = "сохранить и запустить обновленные критерии";
+    			attr_dev(button, "type", "button");
+    			attr_dev(button, "class", "btn btn-primary btn-lg my-2");
+    			add_location(button, file$6, 12, 8, 325);
+    			dispose = listen_dev(button, "click", ctx.click_handler);
+    		},
+
+    		m: function mount(target, anchor) {
+    			insert_dev(target, button, anchor);
+    		},
+
+    		d: function destroy(detaching) {
+    			if (detaching) {
+    				detach_dev(button);
+    			}
+
+    			dispose();
+    		}
+    	};
+    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block_2$1.name, type: "if", source: "(12:6) {#if $vkrulesStore.isupdated}", ctx });
+    	return block;
+    }
+
+    // (23:6) {#each $vkrulesStore.rules as rule, i (rule.tag)}
+    function create_each_block(key_1, ctx) {
+    	var first, current;
 
     	var rule = new Rule({
     		props: { i: ctx.i, rule: ctx.rule },
@@ -7985,17 +8198,25 @@ var main = (function () {
     	});
 
     	const block = {
+    		key: key_1,
+
+    		first: null,
+
     		c: function create() {
+    			first = empty();
     			rule.$$.fragment.c();
+    			this.first = first;
     		},
 
     		m: function mount(target, anchor) {
+    			insert_dev(target, first, anchor);
     			mount_component(rule, target, anchor);
     			current = true;
     		},
 
     		p: function update(changed, ctx) {
     			var rule_changes = {};
+    			if (changed.$vkrulesStore) rule_changes.i = ctx.i;
     			if (changed.$vkrulesStore) rule_changes.rule = ctx.rule;
     			rule.$set(rule_changes);
     		},
@@ -8013,10 +8234,44 @@ var main = (function () {
     		},
 
     		d: function destroy(detaching) {
+    			if (detaching) {
+    				detach_dev(first);
+    			}
+
     			destroy_component(rule, detaching);
     		}
     	};
-    	dispatch_dev("SvelteRegisterBlock", { block, id: create_each_block.name, type: "each", source: "(12:6) {#each $vkrulesStore.rules as rule, i}", ctx });
+    	dispatch_dev("SvelteRegisterBlock", { block, id: create_each_block.name, type: "each", source: "(23:6) {#each $vkrulesStore.rules as rule, i (rule.tag)}", ctx });
+    	return block;
+    }
+
+    // (36:6) {#if $vkrulesStore.isupdated}
+    function create_if_block_1$2(ctx) {
+    	var button, dispose;
+
+    	const block = {
+    		c: function create() {
+    			button = element("button");
+    			button.textContent = "сохранить и запустить обновленные критерии";
+    			attr_dev(button, "type", "button");
+    			attr_dev(button, "class", "btn btn-primary btn-lg");
+    			add_location(button, file$6, 36, 8, 920);
+    			dispose = listen_dev(button, "click", ctx.click_handler_2);
+    		},
+
+    		m: function mount(target, anchor) {
+    			insert_dev(target, button, anchor);
+    		},
+
+    		d: function destroy(detaching) {
+    			if (detaching) {
+    				detach_dev(button);
+    			}
+
+    			dispose();
+    		}
+    	};
+    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block_1$2.name, type: "if", source: "(36:6) {#if $vkrulesStore.isupdated}", ctx });
     	return block;
     }
 
@@ -8043,7 +8298,7 @@ var main = (function () {
     		c: function create() {
     			div = element("div");
     			if_block.c();
-    			attr_dev(div, "class", "container");
+    			attr_dev(div, "class", "container mt-2");
     			add_location(div, file$6, 7, 2, 173);
     		},
 
@@ -8155,6 +8410,18 @@ var main = (function () {
     	validate_store(vkrulesStore, 'vkrulesStore');
     	component_subscribe($$self, vkrulesStore, $$value => { $vkrulesStore = $$value; $$invalidate('$vkrulesStore', $vkrulesStore); });
 
+    	const click_handler = () => {
+    	            $vkrulesStore.sendRules();
+    	          };
+
+    	const click_handler_1 = () => {
+    	          $vkrulesStore.addRule({ value: '' });
+    	        };
+
+    	const click_handler_2 = () => {
+    	            $vkrulesStore.sendRules();
+    	          };
+
     	$$self.$capture_state = () => {
     		return {};
     	};
@@ -8163,7 +8430,12 @@ var main = (function () {
     		if ('$vkrulesStore' in $$props) vkrulesStore.set($vkrulesStore);
     	};
 
-    	return { $vkrulesStore };
+    	return {
+    		$vkrulesStore,
+    		click_handler,
+    		click_handler_1,
+    		click_handler_2
+    	};
     }
 
     class Rules extends SvelteComponentDev {
@@ -8179,7 +8451,7 @@ var main = (function () {
     const file$7 = "src\\data\\ResultAttach.svelte";
 
     // (20:4) {#if attach.title}
-    function create_if_block_2$1(ctx) {
+    function create_if_block_2$2(ctx) {
     	var p, b, t_value = ctx.attach.title + "", t;
 
     	const block = {
@@ -8210,12 +8482,12 @@ var main = (function () {
     			}
     		}
     	};
-    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block_2$1.name, type: "if", source: "(20:4) {#if attach.title}", ctx });
+    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block_2$2.name, type: "if", source: "(20:4) {#if attach.title}", ctx });
     	return block;
     }
 
     // (25:4) {#if attach.img}
-    function create_if_block_1$2(ctx) {
+    function create_if_block_1$3(ctx) {
     	var a, img, img_src_value, img_alt_value, a_href_value;
 
     	const block = {
@@ -8256,7 +8528,7 @@ var main = (function () {
     			}
     		}
     	};
-    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block_1$2.name, type: "if", source: "(25:4) {#if attach.img}", ctx });
+    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block_1$3.name, type: "if", source: "(25:4) {#if attach.img}", ctx });
     	return block;
     }
 
@@ -8296,9 +8568,9 @@ var main = (function () {
     function create_fragment$9(ctx) {
     	var div4, div2, div0, t0, t1_value = ctx.i + 1 + "", t1, t2, a, t3_value = ctx.attach.type + "", t3, a_href_value, t4, div1, t5_value = ctx.attach.date + "", t5, t6, div3, t7, t8;
 
-    	var if_block0 = (ctx.attach.title) && create_if_block_2$1(ctx);
+    	var if_block0 = (ctx.attach.title) && create_if_block_2$2(ctx);
 
-    	var if_block1 = (ctx.attach.img) && create_if_block_1$2(ctx);
+    	var if_block1 = (ctx.attach.img) && create_if_block_1$3(ctx);
 
     	var if_block2 = (ctx.attach.description) && create_if_block$3(ctx);
 
@@ -8383,7 +8655,7 @@ var main = (function () {
     				if (if_block0) {
     					if_block0.p(changed, ctx);
     				} else {
-    					if_block0 = create_if_block_2$1(ctx);
+    					if_block0 = create_if_block_2$2(ctx);
     					if_block0.c();
     					if_block0.m(div3, t7);
     				}
@@ -8396,7 +8668,7 @@ var main = (function () {
     				if (if_block1) {
     					if_block1.p(changed, ctx);
     				} else {
-    					if_block1 = create_if_block_1$2(ctx);
+    					if_block1 = create_if_block_1$3(ctx);
     					if_block1.c();
     					if_block1.m(div3, t8);
     				}
@@ -8504,8 +8776,73 @@ var main = (function () {
     	return child_ctx;
     }
 
-    // (36:6) {#if i > 0}
+    // (35:4) {#if d.tags && d.tags.length > 0}
     function create_if_block_4(ctx) {
+    	var each_1_anchor;
+
+    	let each_value_1 = ctx.d.tags;
+
+    	let each_blocks = [];
+
+    	for (let i_1 = 0; i_1 < each_value_1.length; i_1 += 1) {
+    		each_blocks[i_1] = create_each_block_1(get_each_context_1(ctx, each_value_1, i_1));
+    	}
+
+    	const block = {
+    		c: function create() {
+    			for (let i_1 = 0; i_1 < each_blocks.length; i_1 += 1) {
+    				each_blocks[i_1].c();
+    			}
+
+    			each_1_anchor = empty();
+    		},
+
+    		m: function mount(target, anchor) {
+    			for (let i_1 = 0; i_1 < each_blocks.length; i_1 += 1) {
+    				each_blocks[i_1].m(target, anchor);
+    			}
+
+    			insert_dev(target, each_1_anchor, anchor);
+    		},
+
+    		p: function update(changed, ctx) {
+    			if (changed.d) {
+    				each_value_1 = ctx.d.tags;
+
+    				let i_1;
+    				for (i_1 = 0; i_1 < each_value_1.length; i_1 += 1) {
+    					const child_ctx = get_each_context_1(ctx, each_value_1, i_1);
+
+    					if (each_blocks[i_1]) {
+    						each_blocks[i_1].p(changed, child_ctx);
+    					} else {
+    						each_blocks[i_1] = create_each_block_1(child_ctx);
+    						each_blocks[i_1].c();
+    						each_blocks[i_1].m(each_1_anchor.parentNode, each_1_anchor);
+    					}
+    				}
+
+    				for (; i_1 < each_blocks.length; i_1 += 1) {
+    					each_blocks[i_1].d(1);
+    				}
+    				each_blocks.length = each_value_1.length;
+    			}
+    		},
+
+    		d: function destroy(detaching) {
+    			destroy_each(each_blocks, detaching);
+
+    			if (detaching) {
+    				detach_dev(each_1_anchor);
+    			}
+    		}
+    	};
+    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block_4.name, type: "if", source: "(35:4) {#if d.tags && d.tags.length > 0}", ctx });
+    	return block;
+    }
+
+    // (37:8) {#if i > 0}
+    function create_if_block_5(ctx) {
     	var t;
 
     	const block = {
@@ -8523,15 +8860,15 @@ var main = (function () {
     			}
     		}
     	};
-    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block_4.name, type: "if", source: "(36:6) {#if i > 0}", ctx });
+    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block_5.name, type: "if", source: "(37:8) {#if i > 0}", ctx });
     	return block;
     }
 
-    // (35:4) {#each d.tags as tag, i}
+    // (36:6) {#each d.tags as tag, i}
     function create_each_block_1(ctx) {
     	var t0, span, t1, t2_value = ctx.tag + "", t2, t3;
 
-    	var if_block = (ctx.i > 0) && create_if_block_4(ctx);
+    	var if_block = (ctx.i > 0) && create_if_block_5(ctx);
 
     	const block = {
     		c: function create() {
@@ -8541,7 +8878,7 @@ var main = (function () {
     			t1 = text("\"");
     			t2 = text(t2_value);
     			t3 = text("\"");
-    			add_location(span, file$8, 36, 6, 855);
+    			add_location(span, file$8, 37, 8, 899);
     		},
 
     		m: function mount(target, anchor) {
@@ -8568,16 +8905,16 @@ var main = (function () {
     			}
     		}
     	};
-    	dispatch_dev("SvelteRegisterBlock", { block, id: create_each_block_1.name, type: "each", source: "(35:4) {#each d.tags as tag, i}", ctx });
+    	dispatch_dev("SvelteRegisterBlock", { block, id: create_each_block_1.name, type: "each", source: "(36:6) {#each d.tags as tag, i}", ctx });
     	return block;
     }
 
-    // (50:2) {#if d.text}
-    function create_if_block_1$3(ctx) {
+    // (52:2) {#if d.text}
+    function create_if_block_1$4(ctx) {
     	var div2, div0, t_1, div1, p;
 
     	function select_block_type(changed, ctx) {
-    		if (ctx.hidetext && ctx.d.text.length > 1000) return create_if_block_2$2;
+    		if (ctx.hidetext && ctx.d.text.length > 1000) return create_if_block_2$3;
     		return create_else_block$3;
     	}
 
@@ -8594,13 +8931,13 @@ var main = (function () {
     			p = element("p");
     			if_block.c();
     			attr_dev(div0, "class", "card-header py-0 my-0");
-    			add_location(div0, file$8, 51, 6, 1129);
+    			add_location(div0, file$8, 53, 6, 1185);
     			attr_dev(p, "class", "card-text py-0 my-0");
-    			add_location(p, file$8, 53, 8, 1223);
+    			add_location(p, file$8, 55, 8, 1279);
     			attr_dev(div1, "class", "card-body py-0 my-0");
-    			add_location(div1, file$8, 52, 6, 1181);
+    			add_location(div1, file$8, 54, 6, 1237);
     			attr_dev(div2, "class", "card border-secondary mb-3");
-    			add_location(div2, file$8, 50, 4, 1082);
+    			add_location(div2, file$8, 52, 4, 1138);
     		},
 
     		m: function mount(target, anchor) {
@@ -8633,11 +8970,11 @@ var main = (function () {
     			if_block.d();
     		}
     	};
-    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block_1$3.name, type: "if", source: "(50:2) {#if d.text}", ctx });
+    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block_1$4.name, type: "if", source: "(52:2) {#if d.text}", ctx });
     	return block;
     }
 
-    // (65:10) {:else}
+    // (67:10) {:else}
     function create_else_block$3(ctx) {
     	var html_tag, raw_value = ctx.d.text + "", t, if_block_anchor;
 
@@ -8688,12 +9025,12 @@ var main = (function () {
     			}
     		}
     	};
-    	dispatch_dev("SvelteRegisterBlock", { block, id: create_else_block$3.name, type: "else", source: "(65:10) {:else}", ctx });
+    	dispatch_dev("SvelteRegisterBlock", { block, id: create_else_block$3.name, type: "else", source: "(67:10) {:else}", ctx });
     	return block;
     }
 
-    // (55:10) {#if hidetext && d.text.length > 1000}
-    function create_if_block_2$2(ctx) {
+    // (57:10) {#if hidetext && d.text.length > 1000}
+    function create_if_block_2$3(ctx) {
     	var html_tag, raw_value = ctx.d.text.substr(0, 1000) + "", t, span, dispose;
 
     	const block = {
@@ -8703,7 +9040,7 @@ var main = (function () {
     			span.textContent = "[вывести весь текст..]";
     			html_tag = new HtmlTag(raw_value, t);
     			attr_dev(span, "class", "showhidetext svelte-v29kyq");
-    			add_location(span, file$8, 56, 12, 1359);
+    			add_location(span, file$8, 58, 12, 1415);
     			dispose = listen_dev(span, "click", ctx.click_handler);
     		},
 
@@ -8729,11 +9066,11 @@ var main = (function () {
     			dispose();
     		}
     	};
-    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block_2$2.name, type: "if", source: "(55:10) {#if hidetext && d.text.length > 1000}", ctx });
+    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block_2$3.name, type: "if", source: "(57:10) {#if hidetext && d.text.length > 1000}", ctx });
     	return block;
     }
 
-    // (67:12) {#if d.text.length > 1000}
+    // (69:12) {#if d.text.length > 1000}
     function create_if_block_3$1(ctx) {
     	var span, dispose;
 
@@ -8742,7 +9079,7 @@ var main = (function () {
     			span = element("span");
     			span.textContent = "[скрыть часть текста..]";
     			attr_dev(span, "class", "showhidetext svelte-v29kyq");
-    			add_location(span, file$8, 67, 14, 1680);
+    			add_location(span, file$8, 69, 14, 1736);
     			dispose = listen_dev(span, "click", ctx.click_handler_1);
     		},
 
@@ -8758,11 +9095,11 @@ var main = (function () {
     			dispose();
     		}
     	};
-    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block_3$1.name, type: "if", source: "(67:12) {#if d.text.length > 1000}", ctx });
+    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block_3$1.name, type: "if", source: "(69:12) {#if d.text.length > 1000}", ctx });
     	return block;
     }
 
-    // (82:2) {#if d.attachments && d.attachments.length > 0}
+    // (84:2) {#if d.attachments && d.attachments.length > 0}
     function create_if_block$4(ctx) {
     	var div, current;
 
@@ -8786,7 +9123,7 @@ var main = (function () {
     				each_blocks[i_1].c();
     			}
     			attr_dev(div, "class", "d-flex flex-wrap bd-highlight mb-3");
-    			add_location(div, file$8, 82, 4, 2005);
+    			add_location(div, file$8, 84, 4, 2061);
     		},
 
     		m: function mount(target, anchor) {
@@ -8852,11 +9189,11 @@ var main = (function () {
     			destroy_each(each_blocks, detaching);
     		}
     	};
-    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block$4.name, type: "if", source: "(82:2) {#if d.attachments && d.attachments.length > 0}", ctx });
+    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block$4.name, type: "if", source: "(84:2) {#if d.attachments && d.attachments.length > 0}", ctx });
     	return block;
     }
 
-    // (84:6) {#each d.attachments as attach, n}
+    // (86:6) {#each d.attachments as attach, n}
     function create_each_block$1(ctx) {
     	var div, t, current;
 
@@ -8871,7 +9208,7 @@ var main = (function () {
     			resultattach.$$.fragment.c();
     			t = space();
     			attr_dev(div, "class", "p-2 bd-highlight");
-    			add_location(div, file$8, 84, 8, 2103);
+    			add_location(div, file$8, 86, 8, 2159);
     		},
 
     		m: function mount(target, anchor) {
@@ -8907,24 +9244,18 @@ var main = (function () {
     			destroy_component(resultattach);
     		}
     	};
-    	dispatch_dev("SvelteRegisterBlock", { block, id: create_each_block$1.name, type: "each", source: "(84:6) {#each d.attachments as attach, n}", ctx });
+    	dispatch_dev("SvelteRegisterBlock", { block, id: create_each_block$1.name, type: "each", source: "(86:6) {#each d.attachments as attach, n}", ctx });
     	return block;
     }
 
     function create_fragment$a(ctx) {
     	var div6, div2, div0, big, span0, t0, t1_value = ctx.i + 1 + "", t1, t2, t3, span1, t4_value = ctx.d.type + "", t4, t5, div1, t6_value = ctx.d.date + "", t6, t7, div3, t8, t9, div4, t10, a0, t11_value = ctx.d.url_author + "", t11, a0_href_value, t12, div5, t13, a1, t14_value = ctx.d.url + "", t14, a1_href_value, t15, t16, current;
 
-    	let each_value_1 = ctx.d.tags;
+    	var if_block0 = (ctx.d.tags && ctx.d.tags.length > 0) && create_if_block_4(ctx);
 
-    	let each_blocks = [];
+    	var if_block1 = (ctx.d.text) && create_if_block_1$4(ctx);
 
-    	for (let i_1 = 0; i_1 < each_value_1.length; i_1 += 1) {
-    		each_blocks[i_1] = create_each_block_1(get_each_context_1(ctx, each_value_1, i_1));
-    	}
-
-    	var if_block0 = (ctx.d.text) && create_if_block_1$3(ctx);
-
-    	var if_block1 = (ctx.d.attachments && ctx.d.attachments.length > 0) && create_if_block$4(ctx);
+    	var if_block2 = (ctx.d.attachments && ctx.d.attachments.length > 0) && create_if_block$4(ctx);
 
     	const block = {
     		c: function create() {
@@ -8945,11 +9276,7 @@ var main = (function () {
     			t7 = space();
     			div3 = element("div");
     			t8 = text("критерии:\n    ");
-
-    			for (let i_1 = 0; i_1 < each_blocks.length; i_1 += 1) {
-    				each_blocks[i_1].c();
-    			}
-
+    			if (if_block0) if_block0.c();
     			t9 = space();
     			div4 = element("div");
     			t10 = text("автор:\n    ");
@@ -8961,9 +9288,9 @@ var main = (function () {
     			a1 = element("a");
     			t14 = text(t14_value);
     			t15 = space();
-    			if (if_block0) if_block0.c();
-    			t16 = space();
     			if (if_block1) if_block1.c();
+    			t16 = space();
+    			if (if_block2) if_block2.c();
     			attr_dev(span0, "class", "badge badge-dark");
     			add_location(span0, file$8, 25, 8, 577);
     			attr_dev(span1, "class", "badge badge-dark");
@@ -8978,12 +9305,12 @@ var main = (function () {
     			add_location(div3, file$8, 32, 2, 776);
     			attr_dev(a0, "href", a0_href_value = ctx.d.url_author);
     			attr_dev(a0, "target", "_blank");
-    			add_location(a0, file$8, 41, 4, 920);
-    			add_location(div4, file$8, 39, 2, 899);
+    			add_location(a0, file$8, 43, 4, 976);
+    			add_location(div4, file$8, 41, 2, 955);
     			attr_dev(a1, "href", a1_href_value = ctx.d.url);
     			attr_dev(a1, "target", "_blank");
-    			add_location(a1, file$8, 46, 4, 1009);
-    			add_location(div5, file$8, 44, 2, 990);
+    			add_location(a1, file$8, 48, 4, 1065);
+    			add_location(div5, file$8, 46, 2, 1046);
     			attr_dev(div6, "class", "alert alert-dismissible alert-primary");
     			add_location(div6, file$8, 21, 0, 399);
     		},
@@ -9010,11 +9337,7 @@ var main = (function () {
     			append_dev(div6, t7);
     			append_dev(div6, div3);
     			append_dev(div3, t8);
-
-    			for (let i_1 = 0; i_1 < each_blocks.length; i_1 += 1) {
-    				each_blocks[i_1].m(div3, null);
-    			}
-
+    			if (if_block0) if_block0.m(div3, null);
     			append_dev(div6, t9);
     			append_dev(div6, div4);
     			append_dev(div4, t10);
@@ -9026,9 +9349,9 @@ var main = (function () {
     			append_dev(div5, a1);
     			append_dev(a1, t14);
     			append_dev(div6, t15);
-    			if (if_block0) if_block0.m(div6, null);
-    			append_dev(div6, t16);
     			if (if_block1) if_block1.m(div6, null);
+    			append_dev(div6, t16);
+    			if (if_block2) if_block2.m(div6, null);
     			current = true;
     		},
 
@@ -9045,26 +9368,17 @@ var main = (function () {
     				set_data_dev(t6, t6_value);
     			}
 
-    			if (changed.d) {
-    				each_value_1 = ctx.d.tags;
-
-    				let i_1;
-    				for (i_1 = 0; i_1 < each_value_1.length; i_1 += 1) {
-    					const child_ctx = get_each_context_1(ctx, each_value_1, i_1);
-
-    					if (each_blocks[i_1]) {
-    						each_blocks[i_1].p(changed, child_ctx);
-    					} else {
-    						each_blocks[i_1] = create_each_block_1(child_ctx);
-    						each_blocks[i_1].c();
-    						each_blocks[i_1].m(div3, null);
-    					}
+    			if (ctx.d.tags && ctx.d.tags.length > 0) {
+    				if (if_block0) {
+    					if_block0.p(changed, ctx);
+    				} else {
+    					if_block0 = create_if_block_4(ctx);
+    					if_block0.c();
+    					if_block0.m(div3, null);
     				}
-
-    				for (; i_1 < each_blocks.length; i_1 += 1) {
-    					each_blocks[i_1].d(1);
-    				}
-    				each_blocks.length = each_value_1.length;
+    			} else if (if_block0) {
+    				if_block0.d(1);
+    				if_block0 = null;
     			}
 
     			if ((!current || changed.d) && t11_value !== (t11_value = ctx.d.url_author + "")) {
@@ -9084,32 +9398,32 @@ var main = (function () {
     			}
 
     			if (ctx.d.text) {
-    				if (if_block0) {
-    					if_block0.p(changed, ctx);
+    				if (if_block1) {
+    					if_block1.p(changed, ctx);
     				} else {
-    					if_block0 = create_if_block_1$3(ctx);
-    					if_block0.c();
-    					if_block0.m(div6, t16);
+    					if_block1 = create_if_block_1$4(ctx);
+    					if_block1.c();
+    					if_block1.m(div6, t16);
     				}
-    			} else if (if_block0) {
-    				if_block0.d(1);
-    				if_block0 = null;
+    			} else if (if_block1) {
+    				if_block1.d(1);
+    				if_block1 = null;
     			}
 
     			if (ctx.d.attachments && ctx.d.attachments.length > 0) {
-    				if (if_block1) {
-    					if_block1.p(changed, ctx);
-    					transition_in(if_block1, 1);
+    				if (if_block2) {
+    					if_block2.p(changed, ctx);
+    					transition_in(if_block2, 1);
     				} else {
-    					if_block1 = create_if_block$4(ctx);
-    					if_block1.c();
-    					transition_in(if_block1, 1);
-    					if_block1.m(div6, null);
+    					if_block2 = create_if_block$4(ctx);
+    					if_block2.c();
+    					transition_in(if_block2, 1);
+    					if_block2.m(div6, null);
     				}
-    			} else if (if_block1) {
+    			} else if (if_block2) {
     				group_outros();
-    				transition_out(if_block1, 1, 1, () => {
-    					if_block1 = null;
+    				transition_out(if_block2, 1, 1, () => {
+    					if_block2 = null;
     				});
     				check_outros();
     			}
@@ -9117,12 +9431,12 @@ var main = (function () {
 
     		i: function intro(local) {
     			if (current) return;
-    			transition_in(if_block1);
+    			transition_in(if_block2);
     			current = true;
     		},
 
     		o: function outro(local) {
-    			transition_out(if_block1);
+    			transition_out(if_block2);
     			current = false;
     		},
 
@@ -9131,10 +9445,9 @@ var main = (function () {
     				detach_dev(div6);
     			}
 
-    			destroy_each(each_blocks, detaching);
-
     			if (if_block0) if_block0.d();
     			if (if_block1) if_block1.d();
+    			if (if_block2) if_block2.d();
     		}
     	};
     	dispatch_dev("SvelteRegisterBlock", { block, id: create_fragment$a.name, type: "component", source: "", ctx });
@@ -9318,7 +9631,7 @@ var main = (function () {
     		c: function create() {
     			h3 = element("h3");
     			h3.textContent = "загрузка правил";
-    			add_location(h3, file$9, 9, 6, 237);
+    			add_location(h3, file$9, 9, 6, 242);
     		},
 
     		m: function mount(target, anchor) {
@@ -9407,7 +9720,7 @@ var main = (function () {
     		c: function create() {
     			div = element("div");
     			if_block.c();
-    			attr_dev(div, "class", "container");
+    			attr_dev(div, "class", "container my-2");
     			add_location(div, file$9, 7, 2, 176);
     		},
 
