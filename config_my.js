@@ -1,0 +1,3 @@
+
+module.exports.VK_SERVICE_KEY = 'f2c5724af2c5724af2c5724af9f2a82d6aff2c5f2c5724aaf64fd5821724d7f25b132aa';
+
