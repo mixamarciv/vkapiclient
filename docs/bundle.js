@@ -6245,14 +6245,14 @@ var main = (function () {
     			a1.textContent = "Результаты";
     			attr_dev(a0, "class", "nav-link");
     			attr_dev(a0, "href", "#/rules");
-    			add_location(a0, file, 30, 10, 723);
+    			add_location(a0, file, 30, 10, 722);
     			attr_dev(li0, "class", "nav-item ");
-    			add_location(li0, file, 29, 8, 690);
+    			add_location(li0, file, 29, 8, 689);
     			attr_dev(a1, "class", "nav-link");
     			attr_dev(a1, "href", "#/results");
-    			add_location(a1, file, 33, 10, 833);
+    			add_location(a1, file, 33, 10, 832);
     			attr_dev(li1, "class", "nav-item ");
-    			add_location(li1, file, 32, 8, 800);
+    			add_location(li1, file, 32, 8, 799);
     		},
 
     		m: function mount(target, anchor) {
@@ -6360,9 +6360,9 @@ var main = (function () {
     			if_block1.c();
     			attr_dev(a0, "class", "navbar-brand");
     			attr_dev(a0, "href", "#/home");
-    			add_location(a0, file, 13, 2, 240);
+    			add_location(a0, file, 13, 2, 239);
     			attr_dev(span0, "class", "navbar-toggler-icon");
-    			add_location(span0, file, 23, 4, 510);
+    			add_location(span0, file, 23, 4, 509);
     			attr_dev(button, "class", "navbar-toggler");
     			attr_dev(button, "type", "button");
     			attr_dev(button, "data-toggle", "collapse");
@@ -6370,20 +6370,20 @@ var main = (function () {
     			attr_dev(button, "aria-controls", "navbarColor02");
     			attr_dev(button, "aria-expanded", "false");
     			attr_dev(button, "aria-label", "Toggle navigation");
-    			add_location(button, file, 15, 2, 297);
+    			add_location(button, file, 15, 2, 296);
     			attr_dev(ul, "class", "navbar-nav mr-auto");
-    			add_location(ul, file, 27, 4, 624);
+    			add_location(ul, file, 27, 4, 623);
     			attr_dev(a1, "href", "#/login");
     			attr_dev(a1, "class", "btn btn-primary my-2 my-sm-0");
     			attr_dev(a1, "type", "submit");
-    			add_location(a1, file, 38, 6, 971);
+    			add_location(a1, file, 38, 6, 970);
     			attr_dev(span1, "class", "form-inline my-2 my-lg-0");
-    			add_location(span1, file, 37, 4, 925);
+    			add_location(span1, file, 37, 4, 924);
     			attr_dev(div, "class", "collapse navbar-collapse");
     			attr_dev(div, "id", "navbarColor02");
-    			add_location(div, file, 26, 2, 562);
-    			attr_dev(nav, "class", "navbar navbar-expand-lg navbar-dark bg-dark mynav1 svelte-g5wcnw");
-    			add_location(nav, file, 12, 0, 173);
+    			add_location(div, file, 26, 2, 561);
+    			attr_dev(nav, "class", "navbar navbar-expand-lg navbar-dark bg-dark mynav1 svelte-y6l6k1");
+    			add_location(nav, file, 12, 0, 172);
     		},
 
     		l: function claim(nodes) {

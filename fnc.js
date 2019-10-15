@@ -27,6 +27,7 @@ function readJSONFile(file, defaultData, callback) {
         try {
             data = JSON.parse(jsonString);
         } catch (err) {
+            console.log(err);
             return writeJSONFile(file, defaultData, () => callback(defaultData));
         }
         callback(data);

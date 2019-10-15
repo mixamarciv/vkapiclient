@@ -1,4 +1,4 @@
-const VK_SERVICE_KEY = '*****';
+const { VK_SERVICE_KEY } = require('../config.js');
 
 const moment = require('moment');
 const log = require('wlog-js');
@@ -23,11 +23,16 @@ let mainKey, mainEndpoint;
 let io = 0;
 
 async function initLoad() {
-    const { endpoint, key } = await authWithToken(VK_SERVICE_KEY);
-    mainEndpoint = endpoint;
-    mainKey = key;
-    log.log('endpoint: ' + endpoint);
-    log.log('key: ' + key);
+    try {
+        const { endpoint, key } = await authWithToken(VK_SERVICE_KEY);
+        mainEndpoint = endpoint;
+        mainKey = key;
+    } catch (error) {
+        console.log(error);
+    }
+
+    log.log('vk endpoint: ' + mainEndpoint);
+    log.log('vk key: ' + mainKey);
 
 
     rules = await readJSONFileAsync(rulesFile, rules);
@@ -41,26 +46,34 @@ async function initLoad() {
 }
 
 async function updateRules() {
-    await flushRules(mainEndpoint, mainKey);
-    if (io) io.emit('flushRules');
+    if (!mainEndpoint) return;
+    try {
+        await flushRules(mainEndpoint, mainKey);
+        if (io) io.emit('flushRules');
 
-    for (let rule of rules) {
-        await postRule(mainEndpoint, mainKey, { rule });
-        if (io) io.emit('postRule', rule);
+        for (let rule of rules) {
+            await postRule(mainEndpoint, mainKey, { rule });
+            if (io) io.emit('postRule', rule);
+        }
+        if (io) io.emit('postRulesEnd');
+
+        const vksocket = new VKWebSocket(
+            `wss://${mainEndpoint}/stream?key=${mainKey}`,
+            { socket: { omitServiceMessages: false } }
+        )
+        vksocket.on('data', function (data) {
+            let d = parseData(data);
+            log.logf(d);
+            if (io) io.emit('data', d);
+            addVkdata(d);
+        });
+
+        vksocket.on('error', function (err) {
+            log.logf(err);
+        });
+    } catch (error) {
+        console.log(error);
     }
-    if (io) io.emit('postRulesEnd');
-
-    const vksocket = new VKWebSocket(
-        `wss://${mainEndpoint}/stream?key=${mainKey}`,
-        { socket: { omitServiceMessages: false } }
-    )
-
-    vksocket.on('data', function (data) {
-        let d = parseData(data);
-        log.logf(d);
-        if (io) io.emit('data', d);
-        addVkdata(d);
-    });
 }
 
 async function addVkdata(d) {

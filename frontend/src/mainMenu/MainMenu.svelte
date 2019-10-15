@@ -6,7 +6,7 @@
   .mynav1 {
     border: 0px;
     border-bottom: 1px;
-    font-weight: lighter;
+    font-weight: bolder;
   }
 </style>
 
