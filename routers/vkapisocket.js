@@ -50,12 +50,14 @@ async function updateRules() {
     try {
         await flushRules(mainEndpoint, mainKey);
         if (io) io.emit('flushRules');
+	log.log('flush rules');
 
         for (let rule of rules) {
             await postRule(mainEndpoint, mainKey, { rule });
             if (io) io.emit('postRule', rule);
         }
         if (io) io.emit('postRulesEnd');
+	log.log('post all rules');
 
         const vksocket = new VKWebSocket(
             `wss://${mainEndpoint}/stream?key=${mainKey}`,
