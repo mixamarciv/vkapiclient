@@ -5,7 +5,7 @@
 </script>
 
 <TemplateMain>
-  <div class="container">
+  <div class="container my-2">
     {#if $vkdataStore.loading}
       <h3>загрузка правил</h3>
     {:else}

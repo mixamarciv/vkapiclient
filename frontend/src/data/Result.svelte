@@ -32,10 +32,12 @@
   </div>
   <div>
     критерии:
-    {#each d.tags as tag, i}
-      {#if i > 0},{/if}
-      <span>"{tag}"</span>
-    {/each}
+    {#if d.tags && d.tags.length > 0}
+      {#each d.tags as tag, i}
+        {#if i > 0},{/if}
+        <span>"{tag}"</span>
+      {/each}
+    {/if}
   </div>
   <div>
     автор:

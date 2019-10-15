@@ -45,3 +45,8 @@ module.exports.readJSONFile = readJSONFile;
 module.exports.writeJSONFileAsync = writeJSONFileAsync;
 module.exports.readJSONFileAsync = readJSONFileAsync;
 
+
+function isFunction(v) {
+    return v && typeof v === "function";
+}
+module.exports.isFunction = isFunction;

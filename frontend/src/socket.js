@@ -55,6 +55,8 @@ function createVkRulesStore(socketData) {
 		isupdated: 0,  // флаг что юзер ещё не отправил обновленные правила на сервер
 		sendRules: sendRules,
 		getRules: getRules,
+		addRule: addRule,
+		delRule: delRule,
 		updateRule: updateRule,
 	};
 
@@ -77,9 +79,23 @@ function createVkRulesStore(socketData) {
 			socketData.emit('rules', rules);
 		});
 	}
-	function addRule() {
-		let n = { tag: 'tag' + (vkrules.rules.length + 1), value: '' }
-		vkrules.rules.push(n);
+	function addRule(rule) {
+		if (!rule.tag) rule.tag = 'tag' + moment().format('YYMMDDHHmmssSSS');
+		vkrules.rules.push(rule);
+		vkrules.isupdated = 1;
+		set(vkrules);
+	}
+	function delRule(i, rule) {
+		let irule = vkrules.rules[i];
+		console.log("i: " + i + " rule: " + rule + "  irule: " + irule);
+		console.log(rule);
+		if (rule.tag != irule.tag) {
+			console.log("you can't delete this rule ");
+			console.log(rule);
+			console.log(irule);
+			return;
+		}
+		vkrules.rules.splice(i, 1);
 		vkrules.isupdated = 1;
 		set(vkrules);
 	}
@@ -89,6 +105,7 @@ function createVkRulesStore(socketData) {
 		set(vkrules);
 	}
 	function sendRules() {
+		// отправляем на сервер новые критерии поиска
 		let socket = socketData.getSocket();
 		if (!socket) return;
 		socket.emit('newrules', vkrules.rules);

@@ -14,12 +14,24 @@
 </style>
 
 <div class="alert alert-dismissible alert-primary">
-  <strong>[{i}] {rule.tag}</strong>
+  <strong>{i}</strong>
+  <span class="text-muted">{rule.tag}</span>
   <input
     type="text"
     class="form-control-sm dark-input mx-2 px-2 col-8"
     placeholder="укажите ключевые слова"
     id="input"
-    bind:value={ruleValue} />
-
+    bind:value={ruleValue}
+    on:keyup={() => {
+      rule.value = ruleValue;
+      $vkrulesStore.updateRule(i, rule);
+    }} />
+  <button
+    type="button"
+    class="btn btn-sm btn-outline-danger ml-3"
+    on:click={() => {
+      $vkrulesStore.delRule(i, rule);
+    }}>
+    удалить
+  </button>
 </div>
