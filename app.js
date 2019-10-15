@@ -1,5 +1,5 @@
 'use strict';
-const PORT = 80;
+const {PORT} = require('./config.js');
 const log = require('wlog-js').init(__dirname + '/temp/log');
 
 let express = require('express');
