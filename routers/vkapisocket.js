@@ -54,20 +54,18 @@ async function updateRules() {
     vksocket = ioclient('http://127.0.0.1:' + PORT_VKAPISOCKET);
     vksocket.on('connect', function () {
         vksocket.emit('rules', rules);
-        vksocket.on('data', function (data) {
-            log.logf(data);
-            if (io) io.emit('data', data);
-            addVkdata(data);
-        });
-
-        vksocket.on('error', function (err) {
-            log.logf('vksocket.on("error")!!!!!');
-            log.logf(err);
-        });
-
-        vksocket.on('postRulesEnd', function () {
-            log.log('updateRules() end');
-        })
+    });
+    vksocket.on('data', function (data) {
+        log.logf(data);
+        if (io) io.emit('data', data);
+        addVkdata(data);
+    });
+    vksocket.on('error', function (err) {
+        log.logf('vksocket.on("error")!!!!!');
+        log.logf(err);
+    });
+    vksocket.on('postRulesEnd', function () {
+        log.log('updateRules() end');
     });
 }
 
